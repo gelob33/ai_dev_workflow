@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Assign a ticket to a dev: its own git worktree, its own tmux window, its own ticket brief.
-# Usage: bin/assign <ticket-id> <repo-path> <story|spike> "<what to do>"
+# Usage: bin/assign <ticket-id> <repo-path> <story|spike> "<what to do>" [dev|ba|tech-lead]
 #   story = change code, verify it, open a PR (never merge)
 #   spike = read-only research, write a report, change nothing
 set -euo pipefail
@@ -10,9 +10,11 @@ ID="${1:?ticket id, e.g. fix-signup-email}"
 REPO_IN="${2:?repo path}"
 TYPE="${3:?story or spike}"
 TASK="${4:?what to do}"
+AGENT="${5:-dev}"
 
 [[ "$ID" =~ ^[a-z0-9][a-z0-9-]{1,40}$ ]] || { echo "ticket id: lowercase letters, digits, hyphens" >&2; exit 2; }
 case "$TYPE" in story|spike) ;; *) echo "type must be story or spike" >&2; exit 2 ;; esac
+case "$AGENT" in dev|ba|tech-lead) ;; *) echo "agent must be dev, ba, or tech-lead" >&2; exit 2 ;; esac
 REPO="$(git -C "$REPO_IN" rev-parse --show-toplevel 2>/dev/null)" || { echo "not a git repo: $REPO_IN" >&2; exit 2; }
 STATUS="$GELOBEE_HOME/tickets/$ID.status"
 [ ! -e "$STATUS" ] || { echo "ticket $ID already exists (tickets/$ID.status). Pick a new id." >&2; exit 2; }
@@ -61,9 +63,9 @@ EOF
 : > "$STATUS"
 tmux new-window -d -n "$ID" -c "$TREE" \
   "env GELOBEE_TICKET='$ID' GELOBEE_HOME='$GELOBEE_HOME' PATH='$GELOBEE_HOME/bin':\"\$PATH\" OPENCODE_CONFIG_DIR='$GELOBEE_HOME/opencode' \
-     opencode run --auto --agent dev --title '$ID' \"\$(cat '$BRIEF')\"; \
+     opencode run --auto --agent $AGENT --title '$ID' \"\$(cat '$BRIEF')\"; \
    last=\$(tail -n1 '$STATUS' | cut -d' ' -f1); \
    case \"\$last\" in done|blocked|needs-decision|failed) ;; *) printf 'exited [%s]: run ended without a final update\n' \"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\" >> '$STATUS';; esac; \
    echo; echo '[run ended] $ID'; exec \$SHELL"
 
-echo "assigned $ID ($TYPE) in tmux window '$ID' at $TREE"
+echo "assigned $ID ($TYPE, $AGENT) in tmux window '$ID' at $TREE"
