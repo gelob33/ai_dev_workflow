@@ -23,4 +23,4 @@ Devs can only prove their work if the project tells them how to drive it. This w
    A skill that was never run is a draft. Fix what failed and run it again.
 5. Commit the skill to the project on your branch and open a PR like any story.
 
-Adapted from pstack's create-verification-skill (MIT, Lauren Tan).
+Adapted from pstack's verify-this in cursor-team-kit (MIT, Lauren Tan).

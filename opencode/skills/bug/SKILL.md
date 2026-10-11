@@ -13,10 +13,14 @@ Copy these steps into your todo list first.
 2. Find the cause by elimination. List the candidate causes. Use `how` on the subsystem and `git log -p` on the area for recent changes.
    Each step, test the split that rules out the most. Add logging and read it as the code runs. Don't guess.
    Stop when one cause survives and you can show the mechanism.
+   Grep for the same pattern elsewhere and fix every instance. If it fails only after a restart, suspect persisted state first.
 3. If the fix crosses a function boundary, `architect` first.
 4. Write a test or repro script that fails because of the bug. Commit it.
+   If a failing test is impractical, say why before you fix. Use the closest executable check (script, manual repro, log assertion).
 5. Fix with the smallest change the evidence supports. Commit the fix on top, so history shows fail then pass.
-6. Prove it on the same surface as step 1. The original repro now passes. Unit tests alone are not proof.
+6. Prove it on the same surface as step 1. Run the original repro before and after the fix. Paste both.
+   End with exactly one verdict: VERIFIED, NOT VERIFIED, or INCONCLUSIVE. The wrong surface is INCONCLUSIVE.
+   Unit tests alone are not proof. Do not soften a negative verdict.
 7. Review: call the `qa` subagent with the branch and "fixes <bug>: <root cause>". Fix every ACT ON finding.
 8. Push and open the PR. Body: what was broken, root cause, fix, the failing-then-passing evidence pasted in full, risk.
 9. update done "<PR URL> root cause: <one line>".
