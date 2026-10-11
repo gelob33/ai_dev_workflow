@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Devs post ticket updates here. One line per call, appended to tickets/<ticket>.status.
+# Usage: update <in-progress|done|blocked|needs-decision|failed> "<one short line>"
+# Needs GELOBEE_TICKET and GELOBEE_HOME, which bin/assign sets for every dev.
+set -euo pipefail
+VERB="${1:-}"; MSG="${2:-}"
+case "$VERB" in
+  in-progress|done|blocked|needs-decision|failed) ;;
+  *) echo "status must be one of: in-progress done blocked needs-decision failed" >&2; exit 2 ;;
+esac
+[ -n "$MSG" ] || { echo "message required" >&2; exit 2; }
+: "${GELOBEE_TICKET:?GELOBEE_TICKET not set (only devs started by bin/assign can post updates)}"
+: "${GELOBEE_HOME:?GELOBEE_HOME not set}"
+MSG="${MSG//$'\n'/ }"
+printf '%s [%s]: %s\n' "$VERB" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$MSG" >> "$GELOBEE_HOME/tickets/$GELOBEE_TICKET.status"
+echo "recorded: $VERB"

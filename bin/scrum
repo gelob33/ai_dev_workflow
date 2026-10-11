@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Start the scrum master: the only agent you (the product owner) talk to.
+# Run this inside tmux so devs can open windows beside it:  tmux new -s gelobee  then  bin/scrum
+set -euo pipefail
+GELOBEE_HOME="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$GELOBEE_HOME"
+[ -n "${TMUX:-}" ] || echo "warning: not inside tmux. Devs need a tmux session (tmux new -s gelobee)." >&2
+export OPENCODE_CONFIG_DIR="$GELOBEE_HOME/opencode"
+exec opencode --agent scrum-master "$@"

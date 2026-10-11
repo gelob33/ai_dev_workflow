@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# The scrum board. One line per ticket: id, whether its dev's tmux window is open, last update.
+# Usage: bin/board
+set -uo pipefail
+GELOBEE_HOME="$(cd "$(dirname "$0")/.." && pwd)"
+shopt -s nullglob
+files=("$GELOBEE_HOME"/tickets/*.status)
+[ ${#files[@]} -gt 0 ] || { echo "board is empty"; exit 0; }
+wins=$(tmux list-windows -a -F '#{window_name}' 2>/dev/null || true)
+for f in "${files[@]}"; do
+  id=$(basename "$f" .status)
+  last=$(tail -n1 "$f"); [ -n "$last" ] || last="(starting)"
+  grep -qxF "$id" <<<"$wins" && w="window open" || w="window closed"
+  printf '%-28s %-14s %s\n' "$id" "$w" "$last"
+done

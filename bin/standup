@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# The standup. Waits in bash (zero tokens) and returns only when a ticket needs the scrum master:
+# a dev posted done, blocked, needs-decision, failed, or exited, or a dev went stale
+# (still in-progress but its tmux pane has not changed for STALE seconds).
+# Each item is reported once. Returns after LIMIT seconds with "nothing new" if all is quiet.
+# Usage: bin/standup
+# Env:   POLL=15 LIMIT=540 STALE=1200
+set -uo pipefail
+GELOBEE_HOME="$(cd "$(dirname "$0")/.." && pwd)"
+S="$GELOBEE_HOME/tickets"
+POLL="${POLL:-15}"; LIMIT="${LIMIT:-540}"; STALE="${STALE:-1200}"
+start=$(date +%s)
+
+while :; do
+  events=()
+  now=$(date +%s)
+  for f in "$S"/*.status; do
+    [ -e "$f" ] || continue
+    id=$(basename "$f" .status)
+    total=$(wc -l < "$f")
+    seen=$(cat "$S/$id.seen" 2>/dev/null || echo 0)
+    if [ "$total" -gt "$seen" ]; then
+      while IFS= read -r line; do
+        case "${line%% *}" in
+          done|blocked|needs-decision|failed|exited) events+=("$id: $line") ;;
+        esac
+      done < <(tail -n +"$((seen + 1))" "$f")
+      echo "$total" > "$S/$id.seen"
+    fi
+    last=$(tail -n1 "$f" | cut -d' ' -f1)
+    if [ "$last" = in-progress ] || [ -z "$last" ]; then
+      # Pane fingerprint is kept on disk (tickets/<id>.pane: "<hash> <since>") so staleness
+      # survives across standup calls.
+      h=$(tmux capture-pane -p -t ":=$id" 2>/dev/null | md5sum | cut -c1-12)
+      { read -r old_h since < "$S/$id.pane"; } 2>/dev/null || { old_h=""; since=$now; }
+      if [ "$old_h" != "$h" ]; then
+        echo "$h $now" > "$S/$id.pane"; rm -f "$S/$id.stale"
+      elif [ $((now - since)) -ge "$STALE" ] && [ ! -e "$S/$id.stale" ]; then
+        events+=("$id: stale: no new output for $(( (now - since) / 60 )) min while in progress")
+        touch "$S/$id.stale"
+      fi
+    else
+      rm -f "$S/$id.stale" "$S/$id.pane"
+    fi
+  done
+
+  if [ ${#events[@]} -gt 0 ]; then printf '%s\n' "${events[@]}"; exit 0; fi
+  if [ $((now - start)) -ge "$LIMIT" ]; then echo "nothing new after ${LIMIT}s. Run bin/standup again to keep watching."; exit 0; fi
+  sleep "$POLL"
+done

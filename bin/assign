@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Assign a ticket to a dev: its own git worktree, its own tmux window, its own ticket brief.
+# Usage: bin/assign <ticket-id> <repo-path> <story|spike> "<what to do>"
+#   story = change code, verify it, open a PR (never merge)
+#   spike = read-only research, write a report, change nothing
+set -euo pipefail
+
+GELOBEE_HOME="$(cd "$(dirname "$0")/.." && pwd)"
+ID="${1:?ticket id, e.g. fix-signup-email}"
+REPO_IN="${2:?repo path}"
+TYPE="${3:?story or spike}"
+TASK="${4:?what to do}"
+
+[[ "$ID" =~ ^[a-z0-9][a-z0-9-]{1,40}$ ]] || { echo "ticket id: lowercase letters, digits, hyphens" >&2; exit 2; }
+case "$TYPE" in story|spike) ;; *) echo "type must be story or spike" >&2; exit 2 ;; esac
+REPO="$(git -C "$REPO_IN" rev-parse --show-toplevel 2>/dev/null)" || { echo "not a git repo: $REPO_IN" >&2; exit 2; }
+STATUS="$GELOBEE_HOME/tickets/$ID.status"
+[ ! -e "$STATUS" ] || { echo "ticket $ID already exists (tickets/$ID.status). Pick a new id." >&2; exit 2; }
+tmux has-session 2>/dev/null || { echo "no tmux session. Start one: tmux new -s gelobee" >&2; exit 2; }
+
+TREE="$REPO/.worktrees/$ID"
+grep -qxF '.worktrees/' "$REPO/.git/info/exclude" 2>/dev/null || echo '.worktrees/' >> "$REPO/.git/info/exclude"
+git -C "$REPO" worktree add -q "$TREE" -b "ticket/$ID"
+
+BRIEF="$GELOBEE_HOME/tickets/$ID.brief.md"
+REPORT="$GELOBEE_HOME/tickets/$ID.report.md"
+if [ "$TYPE" = story ]; then
+  DONE="Story. You may change code in this worktree only, on branch ticket/$ID.
+Definition of done: the change works on the real surface (use the project's verify-* skill if it has one),
+commits are small and ordered, the qa subagent has reviewed the diff and you acted on its act-on findings,
+the branch is pushed, and a PR is open (gh pr create). Never merge. Put the PR URL in your done update."
+else
+  DONE="Spike. Read only. Do not edit, commit, or push anything.
+Definition of done: a report at $REPORT that answers the ticket with evidence (file paths, commands you ran, output).
+Put a one-line conclusion in your done update."
+fi
+
+cat > "$BRIEF" <<EOF
+# Ticket $ID
+
+$TASK
+
+## Acceptance
+Repo: $REPO
+Worktree (work only here): $TREE
+$DONE
+
+## Updates
+Nobody reads this terminal. Post updates only with the update command:
+- At start: update in-progress "<what you are about to do>"
+- When finished: update done "<result, PR URL or report path>"
+- Stuck on something outside your control: update blocked "<why>" then stop.
+- A product or preference call only the product owner can make: update needs-decision "<the question, with your recommended answer>" then stop.
+- Gave up after a fair try: update failed "<what you tried>" then stop.
+No progress chatter. One update per status change.
+
+## How to work
+Pick the matching skill and follow it: story, bug, or spike.
+EOF
+
+: > "$STATUS"
+tmux new-window -d -n "$ID" -c "$TREE" \
+  "env GELOBEE_TICKET='$ID' GELOBEE_HOME='$GELOBEE_HOME' PATH='$GELOBEE_HOME/bin':\"\$PATH\" OPENCODE_CONFIG_DIR='$GELOBEE_HOME/opencode' \
+     opencode run --auto --agent dev --title '$ID' \"\$(cat '$BRIEF')\"; \
+   last=\$(tail -n1 '$STATUS' | cut -d' ' -f1); \
+   case \"\$last\" in done|blocked|needs-decision|failed) ;; *) printf 'exited [%s]: run ended without a final update\n' \"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\" >> '$STATUS';; esac; \
+   echo; echo '[run ended] $ID'; exec \$SHELL"
+
+echo "assigned $ID ($TYPE) in tmux window '$ID' at $TREE"
