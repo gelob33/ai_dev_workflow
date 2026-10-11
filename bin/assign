@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Assign a ticket to a dev: its own git worktree, its own tmux window, its own ticket brief.
-# Usage: bin/assign <ticket-id> <repo-path> <story|spike> "<what to do>" [dev|ba|tech-lead]
+# Usage: bin/assign <ticket-id> <repo-path> <story|spike> "<what to do>" [dev|ba|tech-lead|data-engineer|data-analyst|ai-engineer]
 #   story = change code, verify it, open a PR (never merge)
 #   spike = read-only research, write a report, change nothing
 set -euo pipefail
@@ -14,7 +14,7 @@ AGENT="${5:-dev}"
 
 [[ "$ID" =~ ^[a-z0-9][a-z0-9-]{1,40}$ ]] || { echo "ticket id: lowercase letters, digits, hyphens" >&2; exit 2; }
 case "$TYPE" in story|spike) ;; *) echo "type must be story or spike" >&2; exit 2 ;; esac
-case "$AGENT" in dev|ba|tech-lead) ;; *) echo "agent must be dev, ba, or tech-lead" >&2; exit 2 ;; esac
+case "$AGENT" in dev|ba|tech-lead|data-engineer|data-analyst|ai-engineer) ;; *) echo "agent must be dev, ba, tech-lead, data-engineer, data-analyst, or ai-engineer" >&2; exit 2 ;; esac
 REPO="$(git -C "$REPO_IN" rev-parse --show-toplevel 2>/dev/null)" || { echo "not a git repo: $REPO_IN" >&2; exit 2; }
 STATUS="$GELOBEE_HOME/tickets/$ID.status"
 [ ! -e "$STATUS" ] || { echo "ticket $ID already exists (tickets/$ID.status). Pick a new id." >&2; exit 2; }
@@ -41,6 +41,14 @@ case "$AGENT" in
 Definition of done: a decision logged with the register command, and the decision in your done update." ;;
   ba) DONE="$DONE
 BA ticket: change docs and code comments only. Never change code behaviour. Write drafts to $GELOBEE_HOME/tickets/<id>.draft.md." ;;
+  data-analyst) DONE="Data analyst ticket. Read only. Do not edit, commit, or push anything. Do not open a PR. Write to no database.
+Definition of done: a report at $REPORT with Answer, Evidence, Options, and Unknowns. Label each claim measured, read, or guess.
+Name any needed data change for the data engineer. If a data source is missing, post update blocked.
+Put a one-line conclusion in your done update." ;;
+  data-engineer) DONE="$DONE
+Data engineer ticket. If a data source is missing, post update blocked. Do not guess. Write no connection details or credentials." ;;
+  ai-engineer) DONE="$DONE
+AI engineer ticket. Prove behaviour with an eval or a real run. End with VERIFIED, NOT VERIFIED, or INCONCLUSIVE. Write no keys or credentials." ;;
 esac
 
 cat > "$BRIEF" <<EOF
@@ -72,6 +80,6 @@ tmux new-window -d -n "$ID" -c "$TREE" \
      opencode run --auto --agent '$AGENT' --title '$ID' \"\$(cat '$BRIEF')\"; \
    last=\$(tail -n1 '$STATUS' | cut -d' ' -f1); \
    case \"\$last\" in done|blocked|needs-decision|failed) ;; *) printf 'exited [%s]: run ended without a final update\n' \"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\" >> '$STATUS';; esac; \
-   echo; echo '[run ended] $ID'; exec \$SHELL"
+   [ \"\$last\" = done ] && exit 0; echo; echo '[run ended] $ID'; exec \$SHELL"
 
 echo "assigned $ID ($TYPE, $AGENT) in tmux window '$ID' at $TREE"
