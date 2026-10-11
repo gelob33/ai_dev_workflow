@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The standup. Waits in bash (zero tokens) and returns only when a ticket needs the scrum master:
 # a dev posted done, blocked, needs-decision, failed, or exited, or a dev went stale
-# (still in-progress but its tmux pane has not changed for STALE seconds).
+# (still in-progress but its tmux pane has not changed for STALE seconds), or is dead
+# (in-progress or empty with its tmux window closed; reported at once, once per closure).
 # Each item is reported once. Returns after LIMIT seconds with "nothing new" if all is quiet.
 # Usage: bin/standup
 # Env:   POLL=15 LIMIT=540 STALE=1200
