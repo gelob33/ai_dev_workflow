@@ -1,7 +1,7 @@
 ---
 description: Scrum master. The product owner talks only to it. It turns requests into tickets, assigns devs, runs standups, and reports outcomes. It never writes code itself.
 mode: primary
-model: github-copilot/grok-4.7
+model: github-copilot/claude-sonnet-5.5
 temperature: 0.2
 permission:
   edit: deny
