@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Append one row to the decision register. Never rewrites old rows.
+# Usage: register <ticket> <repo> <question> <decision> <why> <confidence> <reversible yes|no>
+# Needs GELOBEE_HOME. If the register is not writable, append to docs/decision-register.tsv
+# in the current directory and print the row, so the caller can put it in its done line.
+set -euo pipefail
+[ $# -eq 7 ] || { echo "usage: register <ticket> <repo> <question> <decision> <why> <confidence> <reversible>" >&2; exit 2; }
+case "$7" in yes|no) ;; *) echo "reversible must be yes or no" >&2; exit 2 ;; esac
+: "${GELOBEE_HOME:?GELOBEE_HOME not set}"
+HEADER=$'utc\tticket\trepo\tquestion\tdecision\twhy\tconfidence\treversible'
+clean() { local s="${1//$'\t'/ }"; s="${s//$'\r'/ }"; printf '%s' "${s//$'\n'/ }"; }
+ROW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+for f in "$@"; do ROW+=$'\t'"$(clean "$f")"; done
+append() { # $1 = file
+  {
+    mkdir -p "$(dirname "$1")" || return 1
+    [ -s "$1" ] || printf '%s\n' "$HEADER" >> "$1" || return 1
+    printf '%s\n' "$ROW" >> "$1"
+  } 2>/dev/null
+}
+if append "$GELOBEE_HOME/data/decision-register.tsv"; then
+  echo "registered: $GELOBEE_HOME/data/decision-register.tsv"
+else
+  append "docs/decision-register.tsv" || { echo "cannot write either register" >&2; exit 1; }
+  echo "fallback: wrote docs/decision-register.tsv. Put this row in the done line:" >&2
+  printf '%s\n' "$ROW"
+fi

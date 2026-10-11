@@ -1,0 +1,2 @@
+utc	ticket	repo	question	decision	why	confidence	reversible
+2026-10-11T08:53:52Z	tl-test	demo	should a CLI store config as JSON or TOML?	Use JSON for CLI config	Verified repo already uses opencode/opencode.json with schema and has no TOML parser or config precedent; JSON adds no new dependency. TOML is better for comments, but hand-editing needs are unverified.	high	yes
