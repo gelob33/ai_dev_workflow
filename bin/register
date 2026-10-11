@@ -14,6 +14,7 @@ for f in "$@"; do ROW+=$'\t'"$(clean "$f")"; done
 append() { # $1 = file
   {
     mkdir -p "$(dirname "$1")" || return 1
+    [ -e "$1" ] || (set -C; printf '%s\n' "$HEADER" > "$1") 2>/dev/null || true
     [ -s "$1" ] || printf '%s\n' "$HEADER" >> "$1" || return 1
     printf '%s\n' "$ROW" >> "$1"
   } 2>/dev/null

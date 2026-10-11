@@ -36,6 +36,12 @@ else
 Definition of done: a report at $REPORT that answers the ticket with evidence (file paths, commands you ran, output).
 Put a one-line conclusion in your done update."
 fi
+case "$AGENT" in
+  tech-lead) DONE="Tech lead ticket. Write no product code. Do not commit, push, or open a PR.
+Definition of done: a decision logged with the register command, and the decision in your done update." ;;
+  ba) DONE="$DONE
+BA ticket: change docs and code comments only. Never change code behaviour. Write drafts to $GELOBEE_HOME/tickets/<id>.draft.md." ;;
+esac
 
 cat > "$BRIEF" <<EOF
 # Ticket $ID
@@ -63,7 +69,7 @@ EOF
 : > "$STATUS"
 tmux new-window -d -n "$ID" -c "$TREE" \
   "env GELOBEE_TICKET='$ID' GELOBEE_HOME='$GELOBEE_HOME' PATH='$GELOBEE_HOME/bin':\"\$PATH\" OPENCODE_CONFIG_DIR='$GELOBEE_HOME/opencode' \
-     opencode run --auto --agent $AGENT --title '$ID' \"\$(cat '$BRIEF')\"; \
+     opencode run --auto --agent '$AGENT' --title '$ID' \"\$(cat '$BRIEF')\"; \
    last=\$(tail -n1 '$STATUS' | cut -d' ' -f1); \
    case \"\$last\" in done|blocked|needs-decision|failed) ;; *) printf 'exited [%s]: run ended without a final update\n' \"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\" >> '$STATUS';; esac; \
    echo; echo '[run ended] $ID'; exec \$SHELL"
