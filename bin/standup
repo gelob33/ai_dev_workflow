@@ -14,6 +14,7 @@ start=$(date +%s)
 while :; do
   events=()
   now=$(date +%s)
+  wins=$(tmux list-windows -a -F '#{window_name}' 2>/dev/null || true)
   for f in "$S"/*.status; do
     [ -e "$f" ] || continue
     id=$(basename "$f" .status)
@@ -29,6 +30,15 @@ while :; do
     fi
     last=$(tail -n1 "$f" | cut -d' ' -f1)
     if [ "$last" = in-progress ] || [ -z "$last" ]; then
+      if ! grep -qxF "$id" <<<"$wins"; then
+        # Window is gone but the dev never posted a final update: dead, report at once (once).
+        if [ ! -e "$S/$id.dead" ]; then
+          events+=("$id: dead: tmux window closed while last update is ${last:-empty}")
+          touch "$S/$id.dead"
+        fi
+        continue
+      fi
+      rm -f "$S/$id.dead"
       # Pane fingerprint is kept on disk (tickets/<id>.pane: "<hash> <since>") so staleness
       # survives across standup calls.
       h=$(tmux capture-pane -p -t ":=$id" 2>/dev/null | md5sum | cut -c1-12)
@@ -40,7 +50,7 @@ while :; do
         touch "$S/$id.stale"
       fi
     else
-      rm -f "$S/$id.stale" "$S/$id.pane"
+      rm -f "$S/$id.stale" "$S/$id.pane" "$S/$id.dead"
     fi
   done
 
