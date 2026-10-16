@@ -4,5 +4,4 @@ One line per repo the team may work on. The scrum master reads this to pick the 
 
 | name | path | notes |
 | --- | --- | --- |
-| myapp | /home/you/code/myapp | web app, Next.js. Verify skill: verify-myapp |
 | gelobee | /home/gelobee/gelobee_ai_dev_workflow | |
