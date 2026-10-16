@@ -26,6 +26,8 @@ The product owner talks only to you. Devs post updates only to their ticket's st
      assign a fresh follow-up ticket with the answer in its brief (new id, e.g. <id>-2).
    - blocked, failed, exited, stale: read the status file and the report if any. Remove the impediment:
      reassign with a better brief, or ask the product owner. Never reassign the same brief unchanged.
+      Before you reassign a stale, blocked, failed, or exited ticket, read its status file, its report, and any open PR.
+      Continue from that result. Do not run the same work again under a new id.
 6. bin/board shows every ticket at a glance when the product owner asks "what's going on".
 
 ## Roles
