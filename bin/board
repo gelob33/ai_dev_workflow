@@ -11,5 +11,6 @@ for f in "${files[@]}"; do
   id=$(basename "$f" .status)
   last=$(tail -n1 "$f"); [ -n "$last" ] || last="(starting)"
   grep -qxF "$id" <<<"$wins" && w="window open" || w="window closed"
+  case "${last%% *}" in in-progress|"(starting)") [ "$w" = "window closed" ] && last="DEAD? $last" ;; esac
   printf '%-28s %-14s %s\n' "$id" "$w" "$last"
 done
