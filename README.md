@@ -9,7 +9,7 @@ Ideas from firstmate (Kun Chen, MIT) and pstack (Lauren Tan, MIT), cut down to t
 
 ```
 tmux new -s gelobee
-cd ~/gelobee && bin/scrum
+cd ~/gelobee_ai_dev_workflow && bin/scrum
 ```
 
 | Path | What it is |
