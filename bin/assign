@@ -22,7 +22,16 @@ tmux has-session 2>/dev/null || { echo "no tmux session. Start one: tmux new -s 
 
 TREE="$REPO/.worktrees/$ID"
 grep -qxF '.worktrees/' "$REPO/.git/info/exclude" 2>/dev/null || echo '.worktrees/' >> "$REPO/.git/info/exclude"
-git -C "$REPO" worktree add -q "$TREE" -b "ticket/$ID"
+git -C "$REPO" fetch -q origin 2>/dev/null || echo "warning: git fetch origin failed; base may be stale" >&2
+BASE=""
+for b in origin/main origin/master; do
+  if git -C "$REPO" rev-parse -q --verify "refs/remotes/$b" >/dev/null; then BASE="$b"; break; fi
+done
+if [ -z "$BASE" ]; then
+  BASE=HEAD
+  echo "warning: no origin/main or origin/master; branching from current HEAD" >&2
+fi
+git -C "$REPO" worktree add -q --no-track "$TREE" -b "ticket/$ID" "$BASE"
 
 BRIEF="$GELOBEE_HOME/tickets/$ID.brief.md"
 REPORT="$GELOBEE_HOME/tickets/$ID.report.md"
